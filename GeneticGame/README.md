@@ -1,3 +1,8 @@
+TL DR
+The players are the dots that avoid the squares. Each generation they evolve. The red dots are newly created dots. The black dots are
+the champions of previous generations. They use neural networks to control their actions, and are evolved with a genetic algorithm.
+
+
 This is a game that demonstrates a neuroevolution algorithm. 100 players are instantiated with random parameters in their neural networks. They die if they touch a square. Their neural networks parameters are stored as their DNA. The top two from the previous generation reproduce by instantiating new players with the crossed over and mutated DNA of their parents. If they are the champion of their generation they are reincarnated each generation from then on. Thus the first gen has 100 players, the second has 101, and so on, as the champions are retained. 
 
 
