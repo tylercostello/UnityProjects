@@ -1,7 +1,7 @@
 This is a game that demonstrates a neuroevolution algorithm. 100 players are instantiated with random parameters in their neural networks. They die if they touch a square. Their neural networks parameters are stored as their DNA. The top two from the previous generation reproduce by instantiating new players with the crossed over and mutated DNA of their parents. If they are the champion of their generation they are reincarnated each generation from then on. Thus the first gen has 100 players, the second has 101, and so on, as the champions are retained. 
 
 
-This is by no means a perfect example of a genetic algorithm, and the one used is fairly basic as far as genetic algorithms go. This is not a NEAT type algorithm where the structure of the neural network is evolved along with the parameters. These contain a set architechture of 5 input nodes, 3 nodes in the hidden layer, and 1 node in the output layer. The 5 inputs are the distances of 5 raycasts extending from the player, and the output is either a 0 or a 1 depending on the input.
+This is by no means a perfect example of a genetic algorithm, and the one used is fairly basic as far as genetic algorithms go. This is not a NEAT type algorithm where the structure of the neural network is evolved along with the parameters. These contain a set architecture of 5 input nodes, 3 nodes in the hidden layer, and 1 node in the output layer. The 5 inputs are the distances of 5 raycasts extending from the player, and the output is either a 0 or a 1 depending on the input.
 
 
 Some improvements would include and randomized parent selection based on fitness, not just the top two. Another improvement would be to give the player more information about its environment through increased raycasts. 
