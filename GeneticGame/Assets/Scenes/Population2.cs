@@ -2,10 +2,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
+using UnityEngine.UI;
 
 public class Population2 : MonoBehaviour
 {
     static int gen = 0;
+    public Text genText;
+    public Text scoreText;
+    private int highScore;
     public GameObject playerPrefab;
     public GameObject obstaclePrefab;
     //public static bool gameOver = false;
@@ -39,6 +43,7 @@ public class Population2 : MonoBehaviour
     }
     void Update()
     {
+       
 
         if (!allDead())
         {
@@ -176,6 +181,11 @@ public class Population2 : MonoBehaviour
         champions.Add(bestPlayer.playerDNA());
 
         pop[0].GetObject().GetComponent<Renderer>().material.color = Color.green;
+        genText.text="Gen: "+gen;
+        if(bestPlayer.getFitness()>highScore){
+            highScore=bestPlayer.getFitness();
+            scoreText.text="High Score: "+highScore;
+        }
         Debug.Log("Fitness " + bestPlayer.getFitness());
         Debug.Log("Gen " + gen);
         gen++;
@@ -184,34 +194,7 @@ public class Population2 : MonoBehaviour
         pop[1].setDNA(nextBest.playerDNA());
         pop[1].GetObject().GetComponent<Renderer>().material.color = Color.green;
         CreateText(bestPlayer.getFitness()+"\n");
-        //Debug.Log("Count "+pop.Count);
-        //Debug.Log("Fitness2 " + nextBest.getFitness());
-
-
-        /*
-                player bestPlayer = pop[0];
-
-                foreach (player players in pop)
-                {
-                    if (bestPlayer.getFitness() < players.getFitness())
-                    {
-                        bestPlayer = players;
-                    }
-                }
-                player nextBest = pop[0];
-                foreach (player players in pop)
-                {
-                    if (nextBest.getFitness() < players.getFitness() && players != bestPlayer)
-                    {
-                        nextBest = players;
-                    }
-                }
-                pop[0] = bestPlayer;
-                Debug.Log("Fitness " + bestPlayer.getFitness());
-                pop[0].setDead(false);
-                pop[1] = nextBest;
-                pop[1].setDead(false);
-                */
+     
     }
 
 
