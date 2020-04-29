@@ -6,7 +6,7 @@ This is by no means a perfect example of a genetic algorithm, and the one used i
 
 Some improvements would include and randomized parent selection based on fitness, not just the top two. Another improvement would be to give the player more information about its environment through increased raycasts. 
 
-The biggest problems with this algorithm is that it does not retain talent well, and that unity is an inherently clunky, high-usage, and limiting piece of software. However these are more or less to be expected. 
+The biggest problems with this algorithm is that it does not retain talent well, and that unity is an inherently clunky, high-usage, and limiting piece of software. Although it may be an inherent problem of using a genetic algorithm, but I haven't researched them enough to be sure. However this was more or less to be expected. 
 
 The first problem is mostly likely caused by the fact that the falling cubes placements are random and therefore some players will simply get lucky and appear to have high performance when in fact it was specific to their situation.
 
