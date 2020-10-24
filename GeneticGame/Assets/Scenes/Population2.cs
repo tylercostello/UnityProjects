@@ -82,7 +82,7 @@ public class Population2 : MonoBehaviour
             for (int i = 100; i<100+champions.Count;i++){
                 pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
                 pop[i].setDNA(champions[i-100]);
-                pop[i].GetObject().GetComponent<Renderer>().material.color = Color.green;
+                pop[i].GetObject().GetComponent<SpriteRenderer>().color = Color.cyan;
                 //Debug.Log("Champion");
 
             }
@@ -115,11 +115,13 @@ public class Population2 : MonoBehaviour
             }
             if (mutateInt == 1)
             {
-                babyList[i] = babyList[i] * -2f;
+               // babyList[i] = babyList[i] * -2f;
+               babyList[i] = babyList[i] - 1f;
             }
             else if (mutateInt == 2)
             {
-                babyList[i] = babyList[i] * 2f;
+               // babyList[i] = babyList[i] * 2f;
+               babyList[i] = babyList[i] + 1f;
             }
 
         }
@@ -180,7 +182,7 @@ public class Population2 : MonoBehaviour
         pop[0].setDNA(bestPlayer.playerDNA());
         champions.Add(bestPlayer.playerDNA());
 
-        pop[0].GetObject().GetComponent<Renderer>().material.color = Color.green;
+        pop[0].GetObject().GetComponent<SpriteRenderer>().color = Color.green;
         genText.text="Gen: "+gen;
         if(bestPlayer.getFitness()>highScore){
             highScore=bestPlayer.getFitness();
@@ -192,7 +194,7 @@ public class Population2 : MonoBehaviour
 
         pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
         pop[1].setDNA(nextBest.playerDNA());
-        pop[1].GetObject().GetComponent<Renderer>().material.color = Color.green;
+        pop[1].GetObject().GetComponent<SpriteRenderer>().color = Color.yellow;
         CreateText(bestPlayer.getFitness()+"\n");
      
     }
