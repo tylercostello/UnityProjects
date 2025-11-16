@@ -12,62 +12,62 @@ public class Population2 : MonoBehaviour
     private int highScore;
     public GameObject playerPrefab;
     public GameObject obstaclePrefab;
-    //public static bool gameOver = false;
     List<player> pop = new List<player>();
     List<List<float>> champions = new List<List<float>>();
-    player topPlayer;
-    player secondPlayer;
     public float lastTime = 0f;
     public float obstacleTime = 0f;
-    
-    // NEW: Variables for increasing difficulty
+    public int populationSize = 1000;
+
+    // Variables for increasing difficulty
     private float generationStartTime = 0f;
     private float baseSpawnInterval = 0.4f;
     private float minSpawnInterval = 0.15f; // Minimum time between spawns
-    private float difficultyIncreaseRate = 0.02f; // How much faster spawns get per second
-    
+    private float difficultyIncreaseRate = 0.00f; // How much faster spawns get per second
+
     void Start()
     {
-        Time.timeScale = 1f; 
+        Time.timeScale = 1f;
         CreateText("New Game \n");
         generationStartTime = Time.time;
-        
-        for (int i = 0; i < 100; i++)
+
+        for (int i = 0; i < populationSize; i++)
         {
             pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
         }
 
     }
-    
-    void CreateText(string content) {
-        string path = Application.dataPath +"/Log.txt";
-        if (!File.Exists(path)){
+
+    void CreateText(string content)
+    {
+        string path = Application.dataPath + "/Log.txt";
+        if (!File.Exists(path))
+        {
             File.WriteAllText(path, "");
         }
         File.AppendAllText(path, content);
 
     }
-    
+
     public static int getGen()
     {
         return gen;
     }
-    
-    // NEW: Calculate current spawn interval based on time elapsed
+
+    // Calculate current spawn interval based on time elapsed
     float GetCurrentSpawnInterval()
     {
         float elapsedTime = Time.time - generationStartTime;
         float currentInterval = baseSpawnInterval - (elapsedTime * difficultyIncreaseRate);
         return Mathf.Max(currentInterval, minSpawnInterval);
     }
-    
+
     void Update()
     {
         if (!allDead())
         {
-            // MODIFIED: Use dynamic spawn interval
+            // Use dynamic spawn interval
             float currentSpawnInterval = GetCurrentSpawnInterval();
-            
+
             if (Time.time - obstacleTime > currentSpawnInterval)
             {
                 Instantiate(obstaclePrefab, new Vector3(Random.Range(-11.0f, 11.0f), 3.85f, 0), Quaternion.identity);
@@ -85,26 +85,58 @@ public class Population2 : MonoBehaviour
         }
         else
         {
-            //they are all dead now
-            this.checkFitnesses();
-            
-            // RESET: Reset timer for new generation
+            // --- MODIFIED BREEDING LOGIC ---
+
+            // 1. Check fitnesses and get a copy of the old population
+            List<player> oldPop = this.checkFitnesses();
+
+            // 2. Reset timer for new generation
             generationStartTime = Time.time;
-            
-            //they are all destroyed except for best 2 now
-            for (int i = 2; i < 100; i++)
+
+            // 3. Breed 98 new players using Tournament Selection
+            //    (pop[0] and pop[1] already exist as the elites)
+            for (int i = 2; i < populationSize; i++)
+            {
+                // Select two parents from the *previous* generation
+                player parent1 = SelectParent(oldPop);
+                player parent2 = SelectParent(oldPop);
+
+                pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
+                pop[i].setDNA(breed(parent1, parent2));
+            }
+
+            // 4. Add back champions from previous generations
+            for (int i = populationSize; i < populationSize + champions.Count; i++)
             {
                 pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
-                pop[i].setDNA(breed(pop[0], pop[1]));
-            }
-            for (int i = 100; i<100+champions.Count;i++){
-                pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
-                pop[i].setDNA(champions[i-100]);
+                pop[i].setDNA(champions[i - populationSize]);
                 pop[i].GetObject().GetComponent<SpriteRenderer>().color = Color.cyan;
-                //Debug.Log("Champion");
             }
         }
     }
+
+    /// <summary>
+    /// Selects a parent using tournament selection.
+    /// Randomly picks N players from the old population and returns the best one.
+    /// </summary>
+    player SelectParent(List<player> oldPopulation)
+    {
+        int tournamentSize = 3; // You can tune this value
+        player bestInTournament = null;
+
+        for (int i = 0; i < tournamentSize; i++)
+        {
+            // Pick a random player from the *previous* generation
+            player randomPlayer = oldPopulation[Random.Range(0, oldPopulation.Count)];
+
+            if (bestInTournament == null || randomPlayer.getFitness() > bestInTournament.getFitness())
+            {
+                bestInTournament = randomPlayer;
+            }
+        }
+        return bestInTournament;
+    }
+
 
     List<float> breed(player p1, player p2)
     {
@@ -127,8 +159,8 @@ public class Population2 : MonoBehaviour
             {
                 babyList.Add(p2List[i]);
             }
-            
-            // IMPROVED: Smaller, more reasonable mutations
+
+            // Smaller, more reasonable mutations
             if (mutateInt == 1)
             {
                 babyList[i] = babyList[i] - Random.Range(0.1f, 0.3f);
@@ -140,24 +172,27 @@ public class Population2 : MonoBehaviour
         }
         return babyList;
     }
-    
+
     bool allDead()
     {
         for (int i = 0; i < pop.Count; i++)
         {
             if (pop[i].itisDead() == false)
             {
-                //Debug.Log(i+" alive");
                 return false;
             }
 
         }
         return true;
     }
-    
-    public void checkFitnesses()
+
+    /// <summary>
+    /// Finds best players, clears the board, and returns a copy of the
+    /// just-deceased population for breeding purposes.
+    /// </summary>
+    public List<player> checkFitnesses()
     {
-        //puts top two players into spots 0 and 1 of pop
+        // 1. Find top two players
         player bestPlayer = pop[0];
         player nextBest = pop[1];
         foreach (player players in pop)
@@ -167,32 +202,36 @@ public class Population2 : MonoBehaviour
                 nextBest = bestPlayer;
                 bestPlayer = players;
             }
-            else if (nextBest.getFitness() < players.getFitness())
+            else if (nextBest.getFitness() < players.getFitness() && players != bestPlayer)
             {
                 nextBest = players;
             }
         }
-        
-        // NEW: Clear all obstacles when generation ends
+
+        // --- MODIFICATION: Save a copy of the old population for breeding ---
+        List<player> oldPopulation = new List<player>(pop);
+
+
+        // 2. Clear all obstacles
         GameObject[] obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
         foreach (GameObject obstacle in obstacles)
         {
             Destroy(obstacle);
         }
-        
-        // FIXED: Remove from end to beginning to avoid skipping elements
+
+        // 3. Destroy all old player objects and clear the list
         for (int i = pop.Count - 1; i >= 0; i--)
         {
             Destroy(pop[i].GetObject());
             pop.RemoveAt(i);
         }
-        
-        // Create new players with same DNA as top two
+
+        // 4. Add the two elites back to the (now empty) pop list
         pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
         pop[0].setDNA(bestPlayer.playerDNA());
-        champions.Add(bestPlayer.playerDNA());
+        champions.Add(bestPlayer.playerDNA()); // Add best to champions list
         pop[0].GetObject().GetComponent<SpriteRenderer>().color = Color.green;
-        
+
         genText.text = "Gen: " + gen;
         if (bestPlayer.getFitness() > highScore)
         {
@@ -207,5 +246,8 @@ public class Population2 : MonoBehaviour
         pop[1].setDNA(nextBest.playerDNA());
         pop[1].GetObject().GetComponent<SpriteRenderer>().color = Color.yellow;
         CreateText(bestPlayer.getFitness() + "\n");
+
+        // --- MODIFICATION: Return the saved old population ---
+        return oldPopulation;
     }
 }
