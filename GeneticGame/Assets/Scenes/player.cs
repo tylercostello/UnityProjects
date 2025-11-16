@@ -164,11 +164,11 @@ public class player : MonoBehaviour
 }
 public class NeuralNetwork
 {
-    Matrix<float> input; //5 now lol
-    Matrix<float> weights1 = Matrix<float>.Build.Random(5, 3);
-    
-    Matrix<float> biases1 = Matrix<float>.Build.Random(1, 3);
-    Matrix<float> weights2 = Matrix<float>.Build.Random(3, 1);
+    Matrix<float> input; //5 inputs
+    // MODIFIED: Changed from 3 to 10 neurons in hidden layer
+    Matrix<float> weights1 = Matrix<float>.Build.Random(5, 10);
+    Matrix<float> biases1 = Matrix<float>.Build.Random(1, 10);
+    Matrix<float> weights2 = Matrix<float>.Build.Random(10, 1);
     Matrix<float> biases2 = Matrix<float>.Build.Random(1, 1);
     Matrix<float> layer1;
     Matrix<float> layer2;
@@ -260,7 +260,7 @@ public class NeuralNetwork
     {
         int startingPoint = 0;
         
-        // Set weights1 (5x3 = 15 values)
+        // Set weights1 (5x10 = 50 values)
         for (int i = 0; i < weights1.RowCount; i++)
         {
             for (int j = 0; j < weights1.ColumnCount; j++)
@@ -270,7 +270,7 @@ public class NeuralNetwork
             }
         }
         
-        // Set biases1 (1x3 = 3 values)
+        // Set biases1 (1x10 = 10 values)
         for (int i = 0; i < biases1.RowCount; i++)
         {
             for (int j = 0; j < biases1.ColumnCount; j++)
@@ -280,7 +280,7 @@ public class NeuralNetwork
             }
         }
         
-        // Set weights2 (3x1 = 3 values)
+        // Set weights2 (10x1 = 10 values)
         for (int i = 0; i < weights2.RowCount; i++)
         {
             for (int j = 0; j < weights2.ColumnCount; j++)

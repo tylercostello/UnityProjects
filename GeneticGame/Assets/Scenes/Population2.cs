@@ -19,16 +19,26 @@ public class Population2 : MonoBehaviour
     player secondPlayer;
     public float lastTime = 0f;
     public float obstacleTime = 0f;
+    
+    // NEW: Variables for increasing difficulty
+    private float generationStartTime = 0f;
+    private float baseSpawnInterval = 0.4f;
+    private float minSpawnInterval = 0.15f; // Minimum time between spawns
+    private float difficultyIncreaseRate = 0.02f; // How much faster spawns get per second
+    
     void Start()
     {
         Time.timeScale = 1f; 
         CreateText("New Game \n");
+        generationStartTime = Time.time;
+        
         for (int i = 0; i < 100; i++)
         {
             pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
         }
 
     }
+    
     void CreateText(string content) {
         string path = Application.dataPath +"/Log.txt";
         if (!File.Exists(path)){
@@ -37,34 +47,38 @@ public class Population2 : MonoBehaviour
         File.AppendAllText(path, content);
 
     }
+    
     public static int getGen()
     {
         return gen;
     }
+    
+    // NEW: Calculate current spawn interval based on time elapsed
+    float GetCurrentSpawnInterval()
+    {
+        float elapsedTime = Time.time - generationStartTime;
+        float currentInterval = baseSpawnInterval - (elapsedTime * difficultyIncreaseRate);
+        return Mathf.Max(currentInterval, minSpawnInterval);
+    }
+    
     void Update()
     {
-       
-
         if (!allDead())
         {
-
-
-            if (Time.time - obstacleTime > 0.4)
+            // MODIFIED: Use dynamic spawn interval
+            float currentSpawnInterval = GetCurrentSpawnInterval();
+            
+            if (Time.time - obstacleTime > currentSpawnInterval)
             {
-
                 Instantiate(obstaclePrefab, new Vector3(Random.Range(-11.0f, 11.0f), 3.85f, 0), Quaternion.identity);
                 obstacleTime = Time.time;
             }
 
             if (Time.time - lastTime > 0.01)
             {
-
                 foreach (player players in pop)
                 {
-
                     players.PlayerUpdate();
-
-
                 }
                 lastTime = Time.time;
             }
@@ -73,6 +87,10 @@ public class Population2 : MonoBehaviour
         {
             //they are all dead now
             this.checkFitnesses();
+            
+            // RESET: Reset timer for new generation
+            generationStartTime = Time.time;
+            
             //they are all destroyed except for best 2 now
             for (int i = 2; i < 100; i++)
             {
@@ -84,10 +102,7 @@ public class Population2 : MonoBehaviour
                 pop[i].setDNA(champions[i-100]);
                 pop[i].GetObject().GetComponent<SpriteRenderer>().color = Color.cyan;
                 //Debug.Log("Champion");
-
             }
-
-
         }
     }
 
@@ -125,6 +140,7 @@ public class Population2 : MonoBehaviour
         }
         return babyList;
     }
+    
     bool allDead()
     {
         for (int i = 0; i < pop.Count; i++)
@@ -138,6 +154,7 @@ public class Population2 : MonoBehaviour
         }
         return true;
     }
+    
     public void checkFitnesses()
     {
         //puts top two players into spots 0 and 1 of pop
@@ -154,6 +171,13 @@ public class Population2 : MonoBehaviour
             {
                 nextBest = players;
             }
+        }
+        
+        // NEW: Clear all obstacles when generation ends
+        GameObject[] obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
+        foreach (GameObject obstacle in obstacles)
+        {
+            Destroy(obstacle);
         }
         
         // FIXED: Remove from end to beginning to avoid skipping elements
@@ -184,7 +208,4 @@ public class Population2 : MonoBehaviour
         pop[1].GetObject().GetComponent<SpriteRenderer>().color = Color.yellow;
         CreateText(bestPlayer.getFitness() + "\n");
     }
-
-
 }
-
