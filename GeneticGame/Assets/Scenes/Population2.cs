@@ -68,22 +68,22 @@ public class Population2 : MonoBehaviour
             // All dead - evolve next generation
             this.checkFitnesses();
             
-            // Create 10 elite copies (no mutation) of the best player
-            for (int i = 2; i < 12; i++)
+            // Create 20 elite copies (no mutation) of the best player
+            for (int i = 2; i < 22; i++)
             {
                 pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
                 pop[i].setDNA(pop[0].playerDNA()); // Exact copy of best
             }
             
-            // Create remaining 88 offspring through breeding
-            for (int i = 12; i < 100; i++)
+            // Create remaining 78 offspring through breeding
+            for (int i = 22; i < 100; i++)
             {
                 pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
                 pop[i].setDNA(breed(pop[0], pop[1]));
             }
             
-            // Add champions (limit to top 5 to prevent memory issues)
-            int championsToAdd = Mathf.Min(champions.Count, 5);
+            // Add champions (limit to top 3 to prevent memory issues)
+            int championsToAdd = Mathf.Min(champions.Count, 3);
             for (int i = 0; i < championsToAdd; i++)
             {
                 pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
@@ -105,7 +105,7 @@ public class Population2 : MonoBehaviour
         for (int i = 0; i < p1List.Count; i++)
         {
             randInt = Random.Range(0, 2);
-            mutateInt = Random.Range(0, 1000); // FIXED: 0.2% mutation rate instead of 2%
+            mutateInt = Random.Range(0, 100); // 3% mutation rate
 
             if (randInt == 0)
             {
@@ -116,14 +116,18 @@ public class Population2 : MonoBehaviour
                 babyList.Add(p2List[i]);
             }
             
-            // FIXED: Smaller mutations (0.05 to 0.15 instead of 0.1 to 0.3)
+            // Small mutations with 3% chance
             if (mutateInt == 1)
             {
-                babyList[i] = babyList[i] - Random.Range(0.05f, 0.15f);
+                babyList[i] = babyList[i] - Random.Range(0.1f, 0.3f);
             }
             else if (mutateInt == 2)
             {
-                babyList[i] = babyList[i] + Random.Range(0.05f, 0.15f);
+                babyList[i] = babyList[i] + Random.Range(0.1f, 0.3f);
+            }
+            else if (mutateInt == 3)
+            {
+                babyList[i] = Random.Range(-0.5f, 0.5f); // Complete randomization (rare)
             }
         }
         return babyList;

@@ -67,6 +67,8 @@ public class player : MonoBehaviour
     {
         if (!isDead && thisPlayer != null)
         {
+            fitness++; // Increment fitness every frame survived
+            
             RaycastHit hit;
             Ray leftRay = new Ray(thisPlayer.transform.position, new Vector3(-0.707f, 1f, 0));
             Ray forwardRay = new Ray(thisPlayer.transform.position, new Vector3(0f, 1f, 0));
@@ -74,29 +76,32 @@ public class player : MonoBehaviour
             Ray sideLeftRay = new Ray(thisPlayer.transform.position, new Vector3(-1f, 0f, 0));
             Ray sideRightRay = new Ray(thisPlayer.transform.position, new Vector3(1f, 0f, 0));
             
+            // Get all distances (normalized 0-1, where 1 = max distance)
             if (Physics.Raycast(sideLeftRay, out hit, 10))
             {
-                sideLeftDist = -hit.distance/10f;
+                sideLeftDist = hit.distance/10f;
                 Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
             }
             else{
-                sideLeftDist=-2f;
+                sideLeftDist = 1f; // No obstacle = max distance
             }
+            
             if (Physics.Raycast(sideRightRay, out hit, 10))
             {
                 sideRightDist = hit.distance/10f;
                 Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
             }
             else{
-                sideRightDist=2f;
+                sideRightDist = 1f;
             }
+            
             if (Physics.Raycast(leftRay, out hit, 10))
             {
-                leftDist = -hit.distance/10f;
+                leftDist = hit.distance/10f;
                 Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
             }
             else{
-                leftDist=-2f;
+                leftDist = 1f;
             }
 
             if (Physics.Raycast(forwardRay, out hit, 10))
@@ -105,7 +110,7 @@ public class player : MonoBehaviour
                 Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
             }
             else{
-                middleDist=2f;
+                middleDist = 1f;
             }
 
             if (Physics.Raycast(rightRay, out hit, 10))
@@ -114,13 +119,15 @@ public class player : MonoBehaviour
                 Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
             }
             else{
-                rightDist=2f;
+                rightDist = 1f;
             }
             
+            // Feed inputs to neural network (all values 0-1)
             temp = new float[,] { { sideLeftDist, leftDist, middleDist, rightDist, sideRightDist } };
             NN.setInput(temp);
             Matrix<float> returnMatrix = NN.feedforward();
 
+            // Move based on neural network output
             if (returnMatrix[0, 0] > 0.5)
             {
                 thisPlayer.transform.position = new Vector3(thisPlayer.transform.position.x + 0.05f, thisPlayer.transform.position.y, 0);
@@ -130,24 +137,19 @@ public class player : MonoBehaviour
                 thisPlayer.transform.position = new Vector3(thisPlayer.transform.position.x - 0.05f, thisPlayer.transform.position.y, 0);
             }
             
-            // Convert negative distances back to positive for collision check
-            leftDist = -leftDist;
-            sideLeftDist = -sideLeftDist;
-            
-            // Check out of bounds
+            // Check out of bounds death
             if (thisPlayer.transform.position.x < -11 || thisPlayer.transform.position.x > 11)
             {
                 isDead = true;
-                fitness = (int)((10)*(Time.time-startTime));
                 Destroy(thisPlayer);
+                return;
             }
             
-            // FIXED: Proper collision detection - check if any raycast is very close
-            if (leftDist < 0.15f || rightDist < 0.15f || middleDist < 0.15f || 
-                sideLeftDist < 0.15f || sideRightDist < 0.15f)
+            // Check collision death - if ANY obstacle is very close
+            if (leftDist < 0.12f || rightDist < 0.12f || middleDist < 0.12f || 
+                sideLeftDist < 0.12f || sideRightDist < 0.12f)
             {
                 isDead = true;
-                fitness = (int)((10)*(Time.time-startTime));
                 Destroy(thisPlayer);
             }
         }
@@ -157,16 +159,22 @@ public class player : MonoBehaviour
 public class NeuralNetwork
 {
     Matrix<float> input; 
-    Matrix<float> weights1 = Matrix<float>.Build.Random(5, 3);
-    Matrix<float> biases1 = Matrix<float>.Build.Random(1, 3);
-    Matrix<float> weights2 = Matrix<float>.Build.Random(3, 1);
-    Matrix<float> biases2 = Matrix<float>.Build.Random(1, 1);
+    Matrix<float> weights1;
+    Matrix<float> biases1;
+    Matrix<float> weights2;
+    Matrix<float> biases2;
     Matrix<float> layer1;
     Matrix<float> layer2;
 
     public NeuralNetwork(float[,] newInput)
     {
         this.input = Matrix<float>.Build.DenseOfArray(newInput);
+        
+        // Initialize with smaller random weights (-0.5 to 0.5)
+        weights1 = Matrix<float>.Build.Random(5, 3) - Matrix<float>.Build.Dense(5, 3, 0.5);
+        biases1 = Matrix<float>.Build.Random(1, 3) - Matrix<float>.Build.Dense(1, 3, 0.5);
+        weights2 = Matrix<float>.Build.Random(3, 1) - Matrix<float>.Build.Dense(3, 1, 0.5);
+        biases2 = Matrix<float>.Build.Random(1, 1) - Matrix<float>.Build.Dense(1, 1, 0.5);
     }
     
     public void setInput(float[,] newInput)
