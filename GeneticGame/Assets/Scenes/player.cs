@@ -62,33 +62,25 @@ public class player : MonoBehaviour
     {
         isDead = newState;
     }
-    // public void Update(){
-    //     Debug.Log("Updating");
-    //     if (startGen != Population2.getGen()){
-    //         Destroy(thisPlayer);
-    //        // Destroy(this);
-    //     }
-    // }
+    
     public void PlayerUpdate()
     {
         if (!isDead && thisPlayer != null)
         {
-            //fitness++;
-
             RaycastHit hit;
             Ray leftRay = new Ray(thisPlayer.transform.position, new Vector3(-0.707f, 1f, 0));
             Ray forwardRay = new Ray(thisPlayer.transform.position, new Vector3(0f, 1f, 0));
             Ray rightRay = new Ray(thisPlayer.transform.position, new Vector3(0.707f, 1f, 0));
             Ray sideLeftRay = new Ray(thisPlayer.transform.position, new Vector3(-1f, 0f, 0));
             Ray sideRightRay = new Ray(thisPlayer.transform.position, new Vector3(1f, 0f, 0));
+            
             if (Physics.Raycast(sideLeftRay, out hit, 10))
             {
-                //testing negative
                 sideLeftDist = -hit.distance/10f;
                 Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
             }
             else{
-                sideLeftDist=-20;
+                sideLeftDist=-2f;
             }
             if (Physics.Raycast(sideRightRay, out hit, 10))
             {
@@ -96,16 +88,15 @@ public class player : MonoBehaviour
                 Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
             }
             else{
-                sideRightDist=20;
+                sideRightDist=2f;
             }
             if (Physics.Raycast(leftRay, out hit, 10))
             {
-                //testing negative
                 leftDist = -hit.distance/10f;
                 Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
             }
             else{
-                leftDist=-20;
+                leftDist=-2f;
             }
 
             if (Physics.Raycast(forwardRay, out hit, 10))
@@ -114,7 +105,7 @@ public class player : MonoBehaviour
                 Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
             }
             else{
-                middleDist=20;
+                middleDist=2f;
             }
 
             if (Physics.Raycast(rightRay, out hit, 10))
@@ -123,76 +114,78 @@ public class player : MonoBehaviour
                 Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
             }
             else{
-                rightDist=20;
+                rightDist=2f;
             }
-            temp = new float[,] { { sideLeftDist, leftDist, middleDist, sideRightDist, rightDist } };
-           // temp = new float[,] { { leftDist, middleDist, rightDist, sideLeftDist, sideRightDist } };
+            
+            temp = new float[,] { { sideLeftDist, leftDist, middleDist, rightDist, sideRightDist } };
             NN.setInput(temp);
             Matrix<float> returnMatrix = NN.feedforward();
 
             if (returnMatrix[0, 0] > 0.5)
             {
-                //if (thisPlayer.transform.position.x < 11)
                 thisPlayer.transform.position = new Vector3(thisPlayer.transform.position.x + 0.05f, thisPlayer.transform.position.y, 0);
             }
             else
             {
-                //if (thisPlayer.transform.position.x > -11)
                 thisPlayer.transform.position = new Vector3(thisPlayer.transform.position.x - 0.05f, thisPlayer.transform.position.y, 0);
             }
-            leftDist=-leftDist;
-            sideLeftDist=-sideLeftDist;
+            
+            // Convert negative distances back to positive for collision check
+            leftDist = -leftDist;
+            sideLeftDist = -sideLeftDist;
+            
+            // Check out of bounds
             if (thisPlayer.transform.position.x < -11 || thisPlayer.transform.position.x > 11)
             {
                 isDead = true;
-                fitness=(int)((10)*(Time.time-startTime));
-                
-                //thisPlayer.GetComponent<Renderer>().material.color = Color.green;
-                Destroy(thisPlayer);
-            }
-            //fix the piece of crap function
-            if ((leftDist < 0.01f && leftDist > 0.001) || (rightDist < 0.01f && rightDist > 0.001) || (middleDist < 0.01f && middleDist > 0.001) || (sideLeftDist < 0.01f && sideLeftDist > 0.001) || (sideRightDist < 0.01f && sideRightDist > 0.001))
-            {
-                isDead = true;
-                fitness=(int)((10)*(Time.time-startTime));
-                //thisPlayer.GetComponent<Renderer>().material.color = Color.green;
+                fitness = (int)((10)*(Time.time-startTime));
                 Destroy(thisPlayer);
             }
             
+            // FIXED: Proper collision detection - check if any raycast is very close
+            if (leftDist < 0.15f || rightDist < 0.15f || middleDist < 0.15f || 
+                sideLeftDist < 0.15f || sideRightDist < 0.15f)
+            {
+                isDead = true;
+                fitness = (int)((10)*(Time.time-startTime));
+                Destroy(thisPlayer);
+            }
         }
     }
 }
+
 public class NeuralNetwork
 {
-    Matrix<float> input; //5 now lol
+    Matrix<float> input; 
     Matrix<float> weights1 = Matrix<float>.Build.Random(5, 3);
-    
     Matrix<float> biases1 = Matrix<float>.Build.Random(1, 3);
     Matrix<float> weights2 = Matrix<float>.Build.Random(3, 1);
     Matrix<float> biases2 = Matrix<float>.Build.Random(1, 1);
     Matrix<float> layer1;
     Matrix<float> layer2;
 
-
     public NeuralNetwork(float[,] newInput)
     {
-
         this.input = Matrix<float>.Build.DenseOfArray(newInput);
     }
+    
     public void setInput(float[,] newInput)
     {
         this.input = Matrix<float>.Build.DenseOfArray(newInput);
     }
+    
     public float relu(float t)
     {
         t = (System.Math.Abs(t) + t) / 2;
         return t;
     }
+    
     public float sigmoid(float t)
     {
         t = (float)(1 / (1 + Math.Pow(Math.E, -t)));
         return t;
     }
+    
     public Matrix<float> feedforward()
     {
         layer1 = (input * weights1 + biases1);
@@ -200,9 +193,7 @@ public class NeuralNetwork
         {
             for (int j = 0; j < layer1.ColumnCount; j++)
             {
-                //testing relu
                 layer1[i, j] = relu(layer1[i, j]);
-              //layer1[i, j] = sigmoid(layer1[i, j]);
             }
         }
         layer2 = (layer1 * weights2 + biases2);
@@ -214,9 +205,8 @@ public class NeuralNetwork
             }
         }
         return layer2;
-
-
     }
+    
     public List<float> getDNA()
     {
         List<float> DNA = new List<float>();
@@ -236,7 +226,6 @@ public class NeuralNetwork
             }
         }
 
-
         for (int i = 0; i < weights2.RowCount; i++)
         {
             for (int j = 0; j < weights2.ColumnCount; j++)
@@ -244,7 +233,6 @@ public class NeuralNetwork
                 DNA.Add(weights2[i, j]);
             }
         }
-
 
         for (int i = 0; i < biases2.RowCount; i++)
         {
@@ -254,52 +242,50 @@ public class NeuralNetwork
             }
         }
         return DNA;
-
     }
 
     public void setDNA(List<float> newDNA)
     {
         int startingPoint = 0;
-        int tempStart = 0;
+        
+        // Set weights1 (5x3 = 15 values)
         for (int i = 0; i < weights1.RowCount; i++)
         {
             for (int j = 0; j < weights1.ColumnCount; j++)
             {
-                weights1[i, j] = newDNA[i + j + tempStart];
+                weights1[i, j] = newDNA[startingPoint];
                 startingPoint++;
             }
         }
-        tempStart = startingPoint;
+        
+        // Set biases1 (1x3 = 3 values)
         for (int i = 0; i < biases1.RowCount; i++)
         {
             for (int j = 0; j < biases1.ColumnCount; j++)
             {
-                biases1[i, j] = newDNA[i + j + tempStart];
+                biases1[i, j] = newDNA[startingPoint];
                 startingPoint++;
             }
         }
-
-        tempStart = startingPoint;
+        
+        // Set weights2 (3x1 = 3 values)
         for (int i = 0; i < weights2.RowCount; i++)
         {
             for (int j = 0; j < weights2.ColumnCount; j++)
             {
-                weights2[i, j] = newDNA[i + j + tempStart];
+                weights2[i, j] = newDNA[startingPoint];
                 startingPoint++;
             }
         }
-
-        tempStart = startingPoint;
+        
+        // Set biases2 (1x1 = 1 value)
         for (int i = 0; i < biases2.RowCount; i++)
         {
             for (int j = 0; j < biases2.ColumnCount; j++)
             {
-                biases2[i, j] = newDNA[i + j + tempStart];
+                biases2[i, j] = newDNA[startingPoint];
                 startingPoint++;
             }
         }
     }
-
-
-
 }

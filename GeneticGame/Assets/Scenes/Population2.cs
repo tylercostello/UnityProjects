@@ -12,82 +12,84 @@ public class Population2 : MonoBehaviour
     private int highScore;
     public GameObject playerPrefab;
     public GameObject obstaclePrefab;
-    //public static bool gameOver = false;
     List<player> pop = new List<player>();
     List<List<float>> champions = new List<List<float>>();
     player topPlayer;
     player secondPlayer;
     public float lastTime = 0f;
     public float obstacleTime = 0f;
+    
     void Start()
     {
-
+        Time.timeScale = 9f; 
         CreateText("New Game \n");
         for (int i = 0; i < 100; i++)
         {
             pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
         }
-
     }
-    void CreateText(string content) {
-        string path = Application.dataPath +"/Log.txt";
-        if (!File.Exists(path)){
+    
+    void CreateText(string content) 
+    {
+        string path = Application.dataPath + "/Log.txt";
+        if (!File.Exists(path))
+        {
             File.WriteAllText(path, "");
         }
         File.AppendAllText(path, content);
-
     }
+    
     public static int getGen()
     {
         return gen;
     }
+    
     void Update()
     {
-       
-
         if (!allDead())
         {
-
-
             if (Time.time - obstacleTime > 0.4)
             {
-
                 Instantiate(obstaclePrefab, new Vector3(Random.Range(-11.0f, 11.0f), 3.85f, 0), Quaternion.identity);
                 obstacleTime = Time.time;
             }
 
             if (Time.time - lastTime > 0.01)
             {
-
                 foreach (player players in pop)
                 {
-
                     players.PlayerUpdate();
-
-
                 }
                 lastTime = Time.time;
             }
         }
         else
         {
-            //they are all dead now
+            // All dead - evolve next generation
             this.checkFitnesses();
-            //they are all destroyed except for best 2 now
-            for (int i = 2; i < 100; i++)
+            
+            // Create 10 elite copies (no mutation) of the best player
+            for (int i = 2; i < 12; i++)
+            {
+                pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
+                pop[i].setDNA(pop[0].playerDNA()); // Exact copy of best
+            }
+            
+            // Create remaining 88 offspring through breeding
+            for (int i = 12; i < 100; i++)
             {
                 pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
                 pop[i].setDNA(breed(pop[0], pop[1]));
             }
-            for (int i = 100; i<100+champions.Count;i++){
+            
+            // Add champions (limit to top 5 to prevent memory issues)
+            int championsToAdd = Mathf.Min(champions.Count, 5);
+            for (int i = 0; i < championsToAdd; i++)
+            {
                 pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
-                pop[i].setDNA(champions[i-100]);
-                pop[i].GetObject().GetComponent<SpriteRenderer>().color = Color.cyan;
-                //Debug.Log("Champion");
-
+                pop[100 + i].setDNA(champions[champions.Count - 1 - i]); // Most recent champions
+                pop[100 + i].GetObject().GetComponent<SpriteRenderer>().color = Color.cyan;
             }
-
-
         }
     }
 
@@ -99,53 +101,52 @@ public class Population2 : MonoBehaviour
 
         List<float> p1List = p1.playerDNA();
         List<float> p2List = p2.playerDNA();
+        
         for (int i = 0; i < p1List.Count; i++)
         {
             randInt = Random.Range(0, 2);
-            mutateInt = Random.Range(0, 100);
+            mutateInt = Random.Range(0, 1000); // FIXED: 0.2% mutation rate instead of 2%
 
             if (randInt == 0)
             {
-
                 babyList.Add(p1List[i]);
             }
             else
             {
                 babyList.Add(p2List[i]);
             }
+            
+            // FIXED: Smaller mutations (0.05 to 0.15 instead of 0.1 to 0.3)
             if (mutateInt == 1)
             {
-               // babyList[i] = babyList[i] * -2f;
-               babyList[i] = babyList[i] - 1f;
+                babyList[i] = babyList[i] - Random.Range(0.05f, 0.15f);
             }
             else if (mutateInt == 2)
             {
-               // babyList[i] = babyList[i] * 2f;
-               babyList[i] = babyList[i] + 1f;
+                babyList[i] = babyList[i] + Random.Range(0.05f, 0.15f);
             }
-
         }
         return babyList;
-
     }
+    
     bool allDead()
     {
         for (int i = 0; i < pop.Count; i++)
         {
             if (pop[i].itisDead() == false)
             {
-                //Debug.Log(i+" alive");
                 return false;
             }
-
         }
         return true;
     }
+    
     public void checkFitnesses()
     {
-        //puts top two players into spots 0 and 1 of pop
+        // Find top two players
         player bestPlayer = pop[0];
         player nextBest = pop[1];
+        
         foreach (player players in pop)
         {
             if (bestPlayer.getFitness() < players.getFitness())
@@ -158,47 +159,43 @@ public class Population2 : MonoBehaviour
                 nextBest = players;
             }
         }
-        for (int i = 0; i < pop.Count; i++)
+        
+        // FIXED: Remove from end to beginning to avoid skipping elements
+        for (int i = pop.Count - 1; i >= 0; i--)
         {
             Destroy(pop[i].GetObject());
             pop.RemoveAt(i);
         }
-        //creates new players with same DNA as top two
-        //retains genetic material and makes breeding easier
-        //Debug.Log(pop.Count);
-        while (pop.Count > 0)
-        {
-            //If somebody reads this don't ask about this
-            //Its not my fault this is necessary don't blame me this is Unity's fault
-            //I just did what I had to
-            for (int i = 0; i < pop.Count; i++)
-            {
-
-                pop.RemoveAt(i);
-            }
-        }
-        //Debug.Log(pop.Count);
+        
+        // Create best player (green)
         pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
         pop[0].setDNA(bestPlayer.playerDNA());
-        champions.Add(bestPlayer.playerDNA());
-
         pop[0].GetObject().GetComponent<SpriteRenderer>().color = Color.green;
-        genText.text="Gen: "+gen;
-        if(bestPlayer.getFitness()>highScore){
-            highScore=bestPlayer.getFitness();
-            scoreText.text="High Score: "+highScore;
+        
+        // Add to champions list (keep only last 10)
+        champions.Add(bestPlayer.playerDNA());
+        if (champions.Count > 10)
+        {
+            champions.RemoveAt(0);
         }
+        
+        // Update UI
+        genText.text = "Gen: " + gen;
+        if (bestPlayer.getFitness() > highScore)
+        {
+            highScore = bestPlayer.getFitness();
+            scoreText.text = "High Score: " + highScore;
+        }
+        
         Debug.Log("Fitness " + bestPlayer.getFitness());
         Debug.Log("Gen " + gen);
         gen++;
 
+        // Create second best player (yellow)
         pop.Add(new player(Instantiate(playerPrefab, new Vector3(Random.Range(-5f, 5f), -3f, 0), Quaternion.identity)));
         pop[1].setDNA(nextBest.playerDNA());
         pop[1].GetObject().GetComponent<SpriteRenderer>().color = Color.yellow;
-        CreateText(bestPlayer.getFitness()+"\n");
-     
+        
+        CreateText(bestPlayer.getFitness() + "\n");
     }
-
-
 }
-
