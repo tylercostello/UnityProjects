@@ -4,9 +4,9 @@ using UnityEngine;
 
 public class AddForce : MonoBehaviour
 {
+
     public GameObject thisObject;
     float lastTime = 0f;
-    
     void FixedUpdate()
     {
         if (Time.time - lastTime > 0.01)
@@ -18,11 +18,6 @@ public class AddForce : MonoBehaviour
                 lastTime = Time.time;
             }
         }
-    }
-    
-    // ADDED: Clean up obstacles that go off screen to prevent memory leaks
-    void OnBecameInvisible()
-    {
-        Destroy(thisObject);
+        
     }
 }
