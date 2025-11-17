@@ -10,13 +10,9 @@ public class player : MonoBehaviour
 
     float startTime;
     int fitness = 0;
-    float sideLeftDist = 0f;
-    float leftDist = 0f;
-    float sideRightDist = 0f;
-    float middleDist = 0f;
+    float[] sensorDistances = new float[20];
     bool isDead = false;
-    float rightDist = 0f;
-    float[,] temp = new float[,] { { 1f, 1f, 1f, 1f, 1f } };
+    float[,] temp = new float[,] { { 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f } };
     GameObject thisPlayer;
     NeuralNetwork NN;
 
@@ -62,74 +58,60 @@ public class player : MonoBehaviour
         isDead = newState;
     }
 
-    // public void Update(){
-    //     Debug.Log("Updating");
-    //     if (startGen != Population2.getGen()){
-    //         Destroy(thisPlayer);
-    //        // Destroy(this);
-    //     }
-    // }
-
     /// <summary>
-    /// This method has been corrected.
-    /// 1. All raycast distances are now positive and normalized.
-    /// 2. "No hit" rays result in a consistent max distance value.
-    /// 3. Death checks are simplified and use the same clean data fed to the network.
+    /// Updated to use 20 sensing rays distributed in a 180-degree arc in front of the player.
+    /// Neural network input layer expanded from 5 to 20 inputs.
     /// </summary>
     public void PlayerUpdate()
     {
         if (!isDead && thisPlayer != null)
         {
             // --- 1. Sensor Initialization ---
-            // Use a consistent max distance value (20f ray / 10f normalization = 2f)
             float maxDistNormalized = 2f;
             float maxRayDistance = 20f;
-            float deathThreshold = 0.05f; // Corresponds to 1 unit of distance (0.1 * 10)
+            float deathThreshold = 0.05f;
 
-            sideLeftDist = maxDistNormalized;
-            leftDist = maxDistNormalized;
-            middleDist = maxDistNormalized;
-            rightDist = maxDistNormalized;
-            sideRightDist = maxDistNormalized;
+            // Initialize all 20 sensors to max distance
+            for (int i = 0; i < 20; i++)
+            {
+                sensorDistances[i] = maxDistNormalized;
+            }
 
             RaycastHit hit;
 
-            // --- 2. Raycasting (All distances are now positive) ---
-            Ray leftRay = new Ray(thisPlayer.transform.position, new Vector3(-0.707f, 1f, 0));
-            Ray forwardRay = new Ray(thisPlayer.transform.position, new Vector3(0f, 1f, 0));
-            Ray rightRay = new Ray(thisPlayer.transform.position, new Vector3(0.707f, 1f, 0));
-            Ray sideLeftRay = new Ray(thisPlayer.transform.position, new Vector3(-1f, 0f, 0));
-            Ray sideRightRay = new Ray(thisPlayer.transform.position, new Vector3(1f, 0f, 0));
-
-            if (Physics.Raycast(sideLeftRay, out hit, maxRayDistance))
+            // --- 2. Raycasting (20 rays distributed across 180 degrees) ---
+            // Rays spread from -90 degrees (left) to +90 degrees (right)
+            // All rays point upward (y=1) with varying x components
+            for (int i = 0; i < 20; i++)
             {
-                sideLeftDist = hit.distance / 10f; // Normalized positive distance
-                Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
-            }
-            if (Physics.Raycast(sideRightRay, out hit, maxRayDistance))
-            {
-                sideRightDist = hit.distance / 10f;
-                Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
-            }
-            if (Physics.Raycast(leftRay, out hit, maxRayDistance))
-            {
-                leftDist = hit.distance / 10f;
-                Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
-            }
-            if (Physics.Raycast(forwardRay, out hit, maxRayDistance))
-            {
-                middleDist = hit.distance / 10f;
-                Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
-            }
-            if (Physics.Raycast(rightRay, out hit, maxRayDistance))
-            {
-                rightDist = hit.distance / 10f;
-                Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
+                // Calculate angle: from -90 to +90 degrees
+                float angle = -90f + (i * 180f / 19f); // 19 gaps between 20 rays
+                float angleRad = angle * Mathf.Deg2Rad;
+                
+                // Convert to direction vector (upward arc)
+                Vector3 direction = new Vector3(Mathf.Sin(angleRad), Mathf.Cos(angleRad), 0f).normalized;
+                
+                Ray ray = new Ray(thisPlayer.transform.position, direction);
+                
+                if (Physics.Raycast(ray, out hit, maxRayDistance))
+                {
+                    sensorDistances[i] = hit.distance / 10f;
+                    Debug.DrawLine(thisPlayer.transform.position, hit.point, Color.red);
+                }
+                else
+                {
+                    Debug.DrawRay(thisPlayer.transform.position, direction * maxRayDistance, Color.green);
+                }
             }
 
             // --- 3. Neural Network Input ---
-            // The network now receives clean, consistent, positive inputs
-            temp = new float[,] { { sideLeftDist, leftDist, middleDist, sideRightDist, rightDist } };
+            // Build input array with all 20 sensor readings
+            temp = new float[1, 20];
+            for (int i = 0; i < 20; i++)
+            {
+                temp[0, i] = sensorDistances[i];
+            }
+            
             NN.setInput(temp);
             Matrix<float> returnMatrix = NN.feedforward();
 
@@ -145,34 +127,34 @@ public class player : MonoBehaviour
                 thisPlayer.transform.position = new Vector3(thisPlayer.transform.position.x - 0.1f, thisPlayer.transform.position.y, 0);
             }
 
-            // --- 5. Death Checks (Simplified and Corrected) ---
-            
-            // Check for off-screen death
+            // --- 5. Death Checks ---
             bool isOffScreen = thisPlayer.transform.position.x < -11 || thisPlayer.transform.position.x > 11;
 
             // Check if any ray is too close
-            // This logic is simple: if any sensor reads a value less than the threshold, it's a hit.
-            bool isHit = (leftDist < deathThreshold) || 
-                         (rightDist < deathThreshold) || 
-                         (middleDist < deathThreshold) || 
-                         (sideLeftDist < deathThreshold) || 
-                         (sideRightDist < deathThreshold);
+            bool isHit = false;
+            for (int i = 0; i < 20; i++)
+            {
+                if (sensorDistances[i] < deathThreshold)
+                {
+                    isHit = true;
+                    break;
+                }
+            }
 
             if (isOffScreen || isHit)
             {
                 isDead = true;
-                fitness = (int)((10) * (Time.time - startTime)); // Calculate fitness based on survival time
+                fitness = (int)((10) * (Time.time - startTime));
                 Destroy(thisPlayer);
             }
         }
     }
 }
 
-// This Neural Network class was already well-implemented and is included as-is.
 public class NeuralNetwork
 {
-    Matrix<float> input; //5 inputs
-    Matrix<float> weights1 = Matrix<float>.Build.Random(5, 10);
+    Matrix<float> input; // Now 20 inputs
+    Matrix<float> weights1 = Matrix<float>.Build.Random(20, 10); // Changed from 5x10 to 20x10
     Matrix<float> biases1 = Matrix<float>.Build.Random(1, 10);
     Matrix<float> weights2 = Matrix<float>.Build.Random(10, 1);
     Matrix<float> biases2 = Matrix<float>.Build.Random(1, 1);
@@ -263,7 +245,7 @@ public class NeuralNetwork
     {
         int startingPoint = 0;
 
-        // Set weights1 (5x10 = 50 values)
+        // Set weights1 (20x10 = 200 values) - Changed from 5x10
         for (int i = 0; i < weights1.RowCount; i++)
         {
             for (int j = 0; j < weights1.ColumnCount; j++)
